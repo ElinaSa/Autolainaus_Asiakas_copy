@@ -9,7 +9,7 @@ import sys # Käynnistysargumentit
 import json # JSON-tiedostojen käsittely
 
 from PySide6 import QtWidgets # Qt-vimpaimet
-from PySide6.QtCore import QThreadPool, Slot, Qt # Säikeistys, slot-dekoraattori ja Qt
+from PySide6.QtCore import QThreadPool, Slot, Qt, QByteArray # Säikeistys, slot-dekoraattori ja Qt
 from PySide6.QtGui import QPixmap, QCursor # Kuvan luku ja kursorin muutokset
 
 from lendingModules import sound # Äänitoiminnot
@@ -383,13 +383,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             resultSet = dbConnection.filterColumsFromTable('auto', ['kuva'], criteria)
             row = resultSet[0]
             picture = row[0] # PNG tai JPG kuva tietokannasta
-           
-            # Write the binary data to a file to store png or jpeg data
-            with open('currentCar.png', 'wb') as temporaryFile: 
-                temporaryFile.write(picture)
 
             # Create a pixmap by reading the file and set label    
-            pixmap = QPixmap('currentCar.png')
+            pixmap = QPixmap()
+            pixmap.loadFromData(QByteArray(bytearray(row[0])))
             self.ui.vehiclePictureLabel.setPixmap(pixmap)
 
         except Exception as e:
@@ -449,6 +446,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.playSoundInTread('readKey.wav')
 
     # Tallennetaan palautuksen tiedot tietokantaan ja palautetaan UI alkutilaan
+    # BUG: tallentaa saman aikaleiman kaikkiin palautuksiin! Pitää rajoittaa vain palauttamattomiin autoihin
+    # WHERE reksiterinumero = 'rekisterrinumero' AND palautusaika IS NULL
     @Slot()
     def saveReturnData(self):
         # Save data to the database
@@ -539,5 +538,6 @@ window.show()
 
 # Käynnistetään sovellus ja tapahtumienkäsittelijä (event loop)
 app.exec()
+
 
     
