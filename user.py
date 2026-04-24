@@ -447,11 +447,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # Tallennetaan palautuksen tiedot tietokantaan ja palautetaan UI alkutilaan
     # BUG: tallentaa saman aikaleiman kaikkiin palautuksiin! Pitää rajoittaa vain palauttamattomiin autoihin
+    # TARKISTA ONKO ITSELLÄ KORJATTU VERSIO, DB OPERATIONS NÄYTTÄÄ OIKEALTA
     # WHERE reksiterinumero = 'rekisterrinumero' AND palautusaika IS NULL
     @Slot()
     def saveReturnData(self):
         # Save data to the database
         # Luetaan tietokanta-asetukset paikallisiin muuttujiin
+        # TODO: Lisää metodiin paikkatietojen haku ja tallennus
         dbSettings = self.currentSettings
         plainTextPassword = self.plainTextPassword
         dbSettings['password'] = plainTextPassword # Vaidetaan selväkieliseksi
