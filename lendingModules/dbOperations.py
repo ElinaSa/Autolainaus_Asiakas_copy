@@ -266,7 +266,6 @@ class DbConnection():
                 currentConnection.close() # Tuhotaan yhteys
 
     # Metodi tietojen muokkaamiseen, yksittäinen sarake
-    # TODO: Muokkaa tätä, siten että saadaan toinen ehto, siitä että palautusaika pitää olla tyhjä!
     def modifyTableData(self, table: str, column: str, newValue, criteriaColumn: str, criteriaValue):
         """Updataes a column according to a filtering criteria
 
@@ -291,7 +290,6 @@ class DbConnection():
 
             # Määritellään lopullinen SQL-lause
             sqlClause = f'UPDATE {table} SET  {column} = {newValue} WHERE {criteriaColumn} = {criteriaValue}'
-
             # Suoritetaan SQL-lause
             cursor.execute(sqlClause)
 
@@ -307,6 +305,9 @@ class DbConnection():
             if currentConnection:
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
+
+# TODO  LISÄYKSIÄ VAROVASTI TARKASTA ET OVAT OIKEIN KATANEN 
+
 
     def updateReturnTimeStamp(self, table: str, column: str,criteriaColumn: str, criteriaValue):
         """Updataes a column according to a filtering criteria
@@ -349,7 +350,7 @@ class DbConnection():
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
 
-    # 
+
     # Päivitetään taulun binäärisaraketta          
     def updateBinaryField(self, table: str, column: str, criteriaColumn: str, criteriaValue, data):
         """Updates a given bytea column in a table accordinto to a criteria
@@ -371,7 +372,6 @@ class DbConnection():
 
             # Määritellään lopullinen SQL-lause, paikkamerkki %s korvautuu binääritiedolla
             sqlClause = f'UPDATE {table} SET  {column} = %s WHERE {criteriaColumn} = {criteriaValue}'
-
             # Suoritetaan SQL-lause ja lisätään data monikkona
             cursor.execute(sqlClause, (data,))
 
@@ -400,7 +400,6 @@ class DbConnection():
 
             # Määritellään lopullinen SQL-lause, paikkamerkki %s korvautuu binääritiedolla
             sqlClause = f'DELETE FROM {table} WHERE {criteriaColumn} = {criteriaValue}'
-            
             # Suoritetaan SQL-lause ja lisätään data monikkona
             cursor.execute(sqlClause)
 
@@ -416,15 +415,16 @@ class DbConnection():
             if currentConnection:
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
-
-
+   
+   
+   # LISÄYS 
     def getNotReturnedId(self, registernumber):
         """Retrieves a lending id of a vehicle not returned by registernumber
 
         Args:
             registernumber (str): The registernumber of vehicle to be returned
         """        
-        # Yritetään avata yhteys tietokantaan ja päivittää tietueita
+        # Yritetään avata yhteys tietokantaan ja hakea tiedot
         try:
             # Luodaan yhteys tietokantaan
             currentConnection = psycopg2.connect(self.connectionString)
@@ -449,7 +449,44 @@ class DbConnection():
             if currentConnection:
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
+   # LISÄYS 
+    
+    def getSettingsValue(self, key):
+        """Get a setting value from database
 
+        Args:
+            key (str): Key for the setting to get
+
+        Returns:
+            str: Value for the setting
+        """        
+        # Yritetään avata yhteys tietokantaan ja hakea tiedot
+        try:
+            # Luodaan yhteys tietokantaan
+            currentConnection = psycopg2.connect(self.connectionString)
+
+            # Luodaan kursori suorittamaan tietokantoperaatiota
+            cursor = currentConnection.cursor()
+
+            # Määritellään lopullinen SQL-lause
+            sqlClause = f"SELECT arvo FROM public.asetus WHERE avain = '{key}'"
+
+            cursor.execute(sqlClause)
+            record= cursor.fetchone()
+            value = record[0]
+            return value
+
+        # Jos tapahtuu virhe, välitetään se luokkaa käyttävälle ohjelmalle
+        except (Exception, psycopg2.Error) as e:
+            raise e 
+        finally:
+
+            # Selvitetään muodostuiko yhteysolio
+            if currentConnection:
+                cursor.close() # Tuhotaan kursori
+                currentConnection.close() # Tuhotaan yhteys
+                
+# LISÄYS 
     def getTimestamps(self, lendingId):
         """Reads starting and ending timestamps for a given lending ID
 
@@ -487,7 +524,6 @@ class DbConnection():
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
 
-
     def setReturnTimestamp(self, lendingId):
         """Set the lend ending timestamp for a returned vehicle
 
@@ -515,28 +551,26 @@ class DbConnection():
             if currentConnection:
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
-
+# LISÄYS
 
     def addTrip(self, lendingId, tripData):
         """Updates spatial information from trip's JSON data to a table
 
         Args:
             lendingId (int): Reference to lending transaction
-            tripData (json): JSON object containing place and odometer data
+            tripData (dict): Dictionary containing place and odometer data
         """        
         
         # Muodostetaan JSON-datatasta arvot SQL-lausetta varten
-        data = json.loads(tripData)
-        startPlace = data["routeStartPosition"]
-        endPlace = data["routeStopPosition"]
-        alkukm = data["driveStartOdo"]
-        loppukm = data['driveStopOdo']
-        aKaupunki = startPlace["city"]
-        aKatu = startPlace["street"]
-        aKatunumero = startPlace["houseno"]
-        bKaupunki = endPlace["city"]
-        bKatu = endPlace["street"]
-        bkatunumero = endPlace["houseno"]
+        
+        aKaupunki = tripData['aKaupunki']
+        aKatu = tripData['aKatu']
+        aKatunumero = tripData['aKatunumero']
+        bKaupunki = tripData['bKaupunki']
+        bKatu = tripData['bKatu']
+        bkatunumero = tripData['bkatunumero']
+        alkukm = tripData['alkukm']
+        loppukm = tripData['loppukm']
 
         # Määritellään SQL-lause yksittäisen matkan osan tallentamiseksi
         sqlClause = f"INSERT INTO public.web_paikkatieto( lainausnumero, a_kaupunki, a_katu, a_katunumero, b_kaupunki, b_katu, b_katunumero, alku_km, loppu_km) VALUES ({lendingId}, '{aKaupunki}', '{aKatu}', '{aKatunumero}', '{bKaupunki}', '{bKatu}', '{bkatunumero}', {alkukm}, {loppukm}"
@@ -563,6 +597,11 @@ class DbConnection():
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
 
+
+
+                
+                
+                # LISÄYS 
     def getDeviceId(self, registerNumber):
         """Retrieves paikannin.com's device ID from auto-taulu (vehicle)
 
@@ -594,18 +633,16 @@ class DbConnection():
             if currentConnection:
                 cursor.close() # Tuhotaan kursori
                 currentConnection.close() # Tuhotaan yhteys
-        
-
-
 if __name__ == "__main__":
 
+    # Huom! Katan portti on 5432 ja Elinan 5433
     settingsDictionary = {'server': 'localhost',
-                      'port': '5432',
+                      'port': '5433',
                       'database': 'autolainaus',
                       'userName': 'postgres',
-                      'password': 'Q2werty7'}
+                      'password': 'Q2werty'}
     dbconnection = DbConnection(settingsDictionary)
-
+    
+    
     data = dbconnection.getNotReturnedId('FPB-343')
     dbconnection.setReturnTimestamp(data)
-    
